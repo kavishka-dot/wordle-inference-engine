@@ -20,11 +20,4 @@ This repository contains a **strict-mode Wordle solver** that:
 - Always logical, never random
 - Extendable framework (probe mode, larger alphabets, adversarial inference)
 
----
 
-## 🚀 Usage
-
-```bash
-git clone https://github.com/yourname/wordle-inference-engine.git
-cd wordle-inference-engine
-python solver.py
