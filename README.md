@@ -1,5 +1,8 @@
 # Information-Theoretic Wordle Solver
 
+wordlegame.drawio.png
+
+
 This project treats **Wordle as a sequential inference problem** rather than a guessing game. Each guess provides structured feedback from which we can **shrink the hypothesis space**. We apply **Shannon’s greedy decision tree strategy** to minimize expected uncertainty at every step using **partition-based information gain**.
 
 This repository contains a **strict-mode Wordle solver** that:
