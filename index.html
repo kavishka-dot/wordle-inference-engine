@@ -810,6 +810,7 @@ function showBanner(word, count) {
 function hideBanner() {
   document.getElementById('ai-banner').classList.remove('visible');
   document.getElementById('ai-btn').classList.remove('active');
+  aiSuggestion = null;
 }
 
 // "Use it" — type the suggested word into the current row
