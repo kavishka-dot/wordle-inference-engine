@@ -639,8 +639,10 @@ function submitGuess() {
     setTimeout(() => flushRow(), 600);
     return;
   }
-  hideBanner();
-  aiSuggestion = null;
+  // Update candidates immediately so AI recomputes correctly on next click
+  const fb = wordleFeedback(guess, answer);
+  candidates = candidates.filter(w => wordleFeedback(guess, w) === fb);
+  hideBanner();  // also resets aiSuggestion
   revealRow(currentRow, guess);
 }
 
@@ -707,8 +709,6 @@ function revealRow(row, guess) {
       showToast(msgs[row] || 'Nice!');
       setTimeout(() => showEndModal(true), 1800);
     } else {
-      // Update candidate set: keep only words consistent with this feedback
-      candidates = candidates.filter(w => wordleFeedback(guess, w) === fb);
       currentRow++; currentCol = 0; currentGuess = [];
       if (currentRow >= MAX_GUESSES) {
         gameOver = true;
