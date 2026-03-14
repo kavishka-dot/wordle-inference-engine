@@ -309,6 +309,66 @@
   }
   #end-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
 
+
+  /* ── STATS MODAL ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 0 20px;
+  }
+  .stat-card {
+    background: #f6f7f8;
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--tile-text);
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .dist-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tile-text);
+    margin-bottom: 10px;
+    text-align: left;
+  }
+  .dist-bars { display: flex; flex-direction: column; gap: 6px; }
+  .dist-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .dist-label { color: var(--muted); width: 20px; text-align: right; flex-shrink: 0; }
+  .dist-bar-wrap { flex: 1; background: #f0f0f0; border-radius: 4px; overflow: hidden; height: 24px; }
+  .dist-bar {
+    height: 100%;
+    background: var(--absent-tile-bg);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 8px;
+    color: #fff; font-size: 0.72rem; font-weight: 700;
+    min-width: 24px;
+    transition: width 0.6s ease;
+  }
+  .dist-bar.highlight { background: var(--correct); }
+  .dist-count { width: 24px; text-align: left; color: var(--tile-text); flex-shrink: 0; }
+
   /* ── LOADING ── */
   #loading {
     position: fixed; inset: 0; background: var(--bg);
@@ -344,6 +404,12 @@
     <button class="icon-btn" id="ai-btn" title="AI suggestion">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5V11h2a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2v1.5c1.2.7 2 2 2 3.5a4 4 0 0 1-8 0c0-1.5.8-2.8 2-3.5V16H8a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h2V9.5C8.8 8.8 8 7.5 8 6a4 4 0 0 1 4-4z"/>
+      </svg>
+    </button>
+    <!-- Stats button -->
+    <button class="icon-btn" id="stats-btn" title="Statistics">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
       </svg>
     </button>
     <!-- Help button -->
@@ -398,6 +464,24 @@
   </div>
 </div>
 
+
+<!-- Stats Modal -->
+<div class="modal-overlay" id="stats-modal">
+  <div class="modal" style="max-width:400px">
+    <h2>Statistics</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="s-played">0</div><div class="stat-label">🎮 Games Played</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-won">0</div><div class="stat-label">🏆 Games Won</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-pct">0%</div><div class="stat-label">📊 Win Rate</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-best">#—</div><div class="stat-label">💎 Best Try</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-streak">0</div><div class="stat-label">🔥 Current Streak</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-max">0</div><div class="stat-label">⚡ Max Streak</div></div>
+    </div>
+    <div class="dist-title">Guess Distribution</div>
+    <div class="dist-bars" id="dist-bars"></div>
+    <button class="modal-btn" id="stats-close" style="background:#1a1a1b;margin-top:20px">Close</button>
+  </div>
+</div>
 
 <!-- End Modal -->
 <div class="modal-overlay" id="end-modal">
@@ -760,6 +844,75 @@ function animBounce(row) {
   });
 }
 
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem('wordle_stats') || 'null'); } catch { return null; }
+}
+
+function defaultStats() {
+  return { played: 0, won: 0, streak: 0, maxStreak: 0, best: null, dist: [0,0,0,0,0,0] };
+}
+
+function saveStats(s) {
+  localStorage.setItem('wordle_stats', JSON.stringify(s));
+}
+
+function recordResult(won, guessCount) {
+  const s = loadStats() || defaultStats();
+  s.played++;
+  if (won) {
+    s.won++;
+    s.streak++;
+    if (s.streak > s.maxStreak) s.maxStreak = s.streak;
+    const idx = guessCount - 1;
+    s.dist[idx] = (s.dist[idx] || 0) + 1;
+    if (s.best === null || guessCount < s.best) s.best = guessCount;
+  } else {
+    s.streak = 0;
+  }
+  saveStats(s);
+}
+
+function renderStats() {
+  const s = loadStats() || defaultStats();
+  const pct = s.played > 0 ? Math.round((s.won / s.played) * 100) : 0;
+  document.getElementById('s-played').textContent = s.played;
+  document.getElementById('s-won').textContent    = s.won;
+  document.getElementById('s-pct').textContent    = pct + '%';
+  document.getElementById('s-best').textContent   = s.best !== null ? '#' + s.best : '#—';
+  document.getElementById('s-streak').textContent = s.streak;
+  document.getElementById('s-max').textContent    = s.maxStreak;
+
+  const maxVal = Math.max(1, ...s.dist);
+  const bars = document.getElementById('dist-bars');
+  bars.innerHTML = '';
+  s.dist.forEach((count, i) => {
+    const pctW = Math.round((count / maxVal) * 100);
+    const row = document.createElement('div');
+    row.className = 'dist-row';
+    row.innerHTML = `
+      <span class="dist-label">#${i+1}</span>
+      <div class="dist-bar-wrap">
+        <div class="dist-bar ${count > 0 && s.best === i+1 ? 'highlight' : ''}" style="width:${Math.max(pctW,8)}%">
+          ${count > 0 ? count : ''}
+        </div>
+      </div>
+      <span class="dist-count">${count}</span>`;
+    bars.appendChild(row);
+  });
+}
+
+document.getElementById('stats-btn').addEventListener('click', () => {
+  renderStats();
+  document.getElementById('stats-modal').classList.add('visible');
+});
+document.getElementById('stats-close').addEventListener('click',
+  () => document.getElementById('stats-modal').classList.remove('visible'));
+document.getElementById('stats-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
+
 // ── TOAST ─────────────────────────────────────────────────────────────────
 let toastTimer;
 function showToast(msg, ms = 1500) {
@@ -775,6 +928,7 @@ function clearToast() {
 
 // ── END MODAL ─────────────────────────────────────────────────────────────
 function showEndModal(won) {
+  recordResult(won, currentRow);
   document.getElementById('end-title').textContent = won ? 'You got it!' : 'Game Over';
   document.getElementById('end-sub').textContent   = won
     ? `Solved in ${currentRow} / ${MAX_GUESSES}`
