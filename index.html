@@ -46,7 +46,7 @@
   /* ── HEADER ── */
   header {
     width: 100%;
-    max-width: 500px;
+    max-width: 600px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -397,7 +397,6 @@
 </div>
 
 <header>
-  <div style="width:34px"></div>
   <h1>Wordle</h1>
   <div class="header-right">
     <!-- AI Assistant button -->
@@ -846,8 +845,14 @@ function animBounce(row) {
 
 
 // ── STATS ─────────────────────────────────────────────────────────────────
+// Safe localStorage wrapper (fails gracefully in file:// or private mode)
+const store = {
+  get(k)    { try { return localStorage.getItem(k); }    catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); }        catch {} },
+};
+
 function loadStats() {
-  try { return JSON.parse(localStorage.getItem('wordle_stats') || 'null'); } catch { return null; }
+  try { return JSON.parse(store.get('wordle_stats') || 'null'); } catch { return null; }
 }
 
 function defaultStats() {
@@ -855,7 +860,7 @@ function defaultStats() {
 }
 
 function saveStats(s) {
-  localStorage.setItem('wordle_stats', JSON.stringify(s));
+  store.set('wordle_stats', JSON.stringify(s));
 }
 
 function recordResult(won, guessCount) {
@@ -928,7 +933,7 @@ function clearToast() {
 
 // ── END MODAL ─────────────────────────────────────────────────────────────
 function showEndModal(won) {
-  recordResult(won, currentRow);
+  recordResult(won, won ? currentRow : 0);
   document.getElementById('end-title').textContent = won ? 'You got it!' : 'Game Over';
   document.getElementById('end-sub').textContent   = won
     ? `Solved in ${currentRow} / ${MAX_GUESSES}`
